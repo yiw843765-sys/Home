@@ -860,7 +860,7 @@
                         await fetch(url, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(_cache[key])
+                            body: JSON.stringify(String(_cache[key]))
                         });
                     }
                 } catch (e) {
@@ -912,7 +912,10 @@
                     if (data && typeof data === 'object') {
                         for (const [fKey, value] of Object.entries(data)) {
                             const originalKey = decodeURIComponent(fKey);
-                            if (value !== null) _cache[originalKey] = String(value);
+                            // Firebase may return booleans/numbers; always store as string
+                            if (value !== null && value !== undefined) {
+                                _cache[originalKey] = String(value);
+                            }
                         }
                     }
                 }
