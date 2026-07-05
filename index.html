@@ -829,32 +829,21 @@
 
     <script>
         // ==========================================================
-        // CLOUD SYNC SHIM
-        // Replaces the browser's localStorage with a version backed
-        // by window.storage, so checking something off on your phone
-        // shows up on your computer too. Everything below this block
-        // still calls `localStorage.getItem/setItem/removeItem` like
-        // normal -- nothing else in the file needed to change.
+        // FIREBASE SYNC SHIM
+        // Saves all checkbox states, notes, due dates etc. to Firebase
+        // Realtime Database so data persists across devices and refreshes.
+        // Everything below still calls localStorage.getItem/setItem/removeItem
+        // exactly as before -- nothing else in the file needed to change.
         // ==========================================================
-        const _cache = {};       // in-memory mirror, kept in sync with the cloud
-        let _ready = false;      // becomes true once the initial cloud load finishes
-        let _pendingSaves = {};  // keys that need to be written to cloud
+        const _FIREBASE_URL = 'https://our-casita-default-rtdb.firebaseio.com/dashboard';
+        const _cache = {};
+        let _ready = false;
+        let _pendingSaves = {};
         let _saveTimer = null;
 
-        // Storage key encoding: we prefix each stored value with the original key
-        // (URL-encoded) and a null byte delimiter, so we can recover the exact
-        // original key name on load regardless of the storage key sanitization.
-        function _encodeValue(originalKey, value) {
-            return encodeURIComponent(originalKey) + '\x00' + value;
-        }
-        function _decodeValue(encoded) {
-            const sep = encoded.indexOf('\x00');
-            if (sep === -1) return { key: null, value: encoded }; // legacy fallback
-            return { key: decodeURIComponent(encoded.substring(0, sep)), value: encoded.substring(sep + 1) };
-        }
-        function _toStorageKey(key) {
-            // Sanitize to allowed chars; max 180 chars leaving room for 'dash-' prefix
-            return 'dash-' + key.replace(/[^a-zA-Z0-9\-]/g, '_').substring(0, 180);
+        function _fbKey(key) {
+            // Firebase keys can't contain . # $ / [ ]
+            return encodeURIComponent(key).replace(/\./g, '%2E');
         }
 
         async function _flushSaves() {
@@ -862,15 +851,20 @@
             _pendingSaves = {};
             let anyFailed = false;
             for (const key of keys) {
-                const storageKey = _toStorageKey(key);
+                const fKey = _fbKey(key);
+                const url = _FIREBASE_URL + '/' + fKey + '.json';
                 try {
                     if (!Object.prototype.hasOwnProperty.call(_cache, key)) {
-                        await window.storage.delete(storageKey, false);
+                        await fetch(url, { method: 'DELETE' });
                     } else {
-                        await window.storage.set(storageKey, _encodeValue(key, _cache[key]), false);
+                        await fetch(url, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(_cache[key])
+                        });
                     }
                 } catch (e) {
-                    console.error('Cloud save failed for key', key, e);
+                    console.error('Firebase save failed for key', key, e);
                     anyFailed = true;
                 }
             }
@@ -899,7 +893,7 @@
             },
             setItem(key, value) {
                 const str = String(value);
-                if (_cache[key] === str) return; // no-op if unchanged
+                if (_cache[key] === str) return;
                 _cache[key] = str;
                 if (_ready) { _scheduleSave(key); showSyncStatus('Saving…'); }
             },
@@ -912,25 +906,23 @@
 
         async function _loadFromCloud() {
             try {
-                const listing = await window.storage.list('dash-', false);
-                if (listing && listing.keys && listing.keys.length > 0) {
-                    await Promise.all(listing.keys.map(async (storageKey) => {
-                        try {
-                            const result = await window.storage.get(storageKey, false);
-                            if (result && result.value) {
-                                const { key, value } = _decodeValue(result.value);
-                                if (key) _cache[key] = value;
-                            }
-                        } catch (e) { /* skip individual bad keys */ }
-                    }));
+                const res = await fetch(_FIREBASE_URL + '.json');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && typeof data === 'object') {
+                        for (const [fKey, value] of Object.entries(data)) {
+                            const originalKey = decodeURIComponent(fKey);
+                            if (value !== null) _cache[originalKey] = String(value);
+                        }
+                    }
                 }
             } catch (e) {
-                console.log('Cloud load skipped:', e && e.message);
+                console.log('Firebase load skipped:', e && e.message);
             }
             _ready = true;
         }
         // ==========================================================
-        // END CLOUD SYNC SHIM
+        // END FIREBASE SYNC SHIM
         // ==========================================================
 
         // --- 1. REAL-TIME CALENDAR CALCULATION ENGINE ---
