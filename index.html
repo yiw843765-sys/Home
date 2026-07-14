@@ -1405,13 +1405,16 @@
         function renderDailyRoomGroups(dayIndex) {
             const groups = dailyRoomGroups[dayIndex];
             if (!groups || groups.length === 0) return '<div style="color:var(--text-muted); padding:10px;">No tasks for today.</div>';
-            // Single group with no room label — render flat
+            // Build the same idScope that buildJuly2026Schedule uses so Daily and Weekly tabs share IDs
+            const dayLabel = today.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+            const dateNum = today.getDate();
+            const dailyScope = 'weekly-cycle-' + dayLabel.toLowerCase() + '-' + dateNum;
             if (groups.length === 1 && !groups[0].room) {
-                return renderCheckboxGroup(groups[0].tasks, 'weekly-' + _weekKey);
+                return renderCheckboxGroup(groups[0].tasks, dailyScope);
             }
             return groups.map(g => `
                 ${g.room ? `<div class="group-sub-heading">· ${g.room}</div>` : ''}
-                ${renderCheckboxGroup(g.tasks, 'weekly-' + _weekKey)}
+                ${renderCheckboxGroup(g.tasks, dailyScope)}
             `).join('');
         }
 
@@ -1443,9 +1446,9 @@
             }).join('');
         }
 
-        function renderCustomScheduleGroup(items, scopeName) {
+        function renderCustomScheduleGroup(items) {
             return items.map(item => {
-                const generatedId = generateActiveId(item.task, item.meta, scopeName);
+                const generatedId = generateActiveId(item.task, item.meta, item.idScope);
                 const isChecked = localStorage.getItem(generatedId) === "true" ? "checked" : "";
                 const hasNote = !!localStorage.getItem(generatedId + '-note');
                 return `
@@ -1840,11 +1843,11 @@
                     <div class="todo-group">
                         <div class="group-heading">Daily Baseline To-Dos</div>
                         <div class="group-sub-heading">· Morning</div>
-                        ${renderCheckboxGroup(dailyHabitsDivided.morning, 'daily-' + _weekKey)}
+                        ${renderCheckboxGroup(dailyHabitsDivided.morning, 'daily-' + todayKey())}
                         <div class="group-sub-heading">· Afternoon</div>
-                        ${renderCheckboxGroup(dailyHabitsDivided.afternoon, 'daily-' + _weekKey)}
+                        ${renderCheckboxGroup(dailyHabitsDivided.afternoon, 'daily-' + todayKey())}
                         <div class="group-sub-heading">· Evening</div>
-                        ${renderCheckboxGroup(dailyHabitsDivided.evening, 'daily-' + _weekKey)}
+                        ${renderCheckboxGroup(dailyHabitsDivided.evening, 'daily-' + todayKey())}
                     </div>
                     <div class="todo-group">
                         <div class="group-heading">Weekly Rotation Layout (${today.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()})</div>
@@ -1882,7 +1885,7 @@
                         <div class="todo-group" id="block-week-${block.weekNumber}">
                             <div class="group-heading">Week ${block.weekNumber}</div>
                             <div class="group-date-range">${block.dateRangeString}</div>
-                            ${renderCustomScheduleGroup(block.allTasks, 'weekly-schedule')}
+                            ${renderCustomScheduleGroup(block.allTasks)}
                         </div>
                     `;
                 });
