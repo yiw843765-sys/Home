@@ -1409,6 +1409,7 @@
             const dayLabel = today.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
             const dateNum = today.getDate();
             const dailyScope = 'weekly-cycle-' + dayLabel.toLowerCase() + '-' + dateNum;
+            console.log('[DAILY TAB] scope:', dailyScope, '| first task ID:', generateActiveId((groups[0]?.tasks || groups[0]?.tasks || ['?'])[0], '', dailyScope));
             if (groups.length === 1 && !groups[0].room) {
                 return renderCheckboxGroup(groups[0].tasks, dailyScope);
             }
@@ -1447,6 +1448,7 @@
         }
 
         function renderCustomScheduleGroup(items) {
+            if (items.length > 0) console.log('[WEEKLY TAB] first item idScope:', items[0].idScope, '| first task ID:', generateActiveId(items[0].task, '', items[0].idScope));
             return items.map(item => {
                 // Use only task + idScope (no meta) so the ID matches what renderDailyRoomGroups generates
                 const generatedId = generateActiveId(item.task, '', item.idScope);
