@@ -1435,7 +1435,7 @@
                     ? `<span style="font-size:0.78rem; font-weight:700; color:${isToday ? 'var(--success-green)' : 'var(--text-muted)'}; margin-left:8px;">${isToday ? '📅 TODAY' : '📅 ' + scheduledLabel}${wasRescheduled ? ' <span style="color:#c07a3a;">↻ rescheduled</span>' : ''}</span>`
                     : '';
                 return `
-                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}')" oncontextmenu="openContextMenu(event, '${generatedId}', '${task.replace(/'/g, "\\'")}')">
+                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}', !document.getElementById('${generatedId}').checked)" oncontextmenu="openContextMenu(event, '${generatedId}', '${task.replace(/'/g, "\\'")}')">
                         <input type="checkbox" id="${generatedId}" ${isChecked} onclick="event.stopPropagation(); toggleTaskStatusDirectly('${generatedId}')">
                         <div class="todo-content-wrapper">
                             <span class="todo-text">${task}</span>
@@ -1455,7 +1455,7 @@
                 const isChecked = localStorage.getItem(generatedId) === "true" ? "checked" : "";
                 const hasNote = !!localStorage.getItem(generatedId + '-note');
                 return `
-                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}')" oncontextmenu="openContextMenu(event, '${generatedId}', '${item.task.replace(/'/g, "\\'")}')">
+                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}', !document.getElementById('${generatedId}').checked)" oncontextmenu="openContextMenu(event, '${generatedId}', '${item.task.replace(/'/g, "\\'")}')">
                         <input type="checkbox" id="${generatedId}" ${isChecked} onclick="event.stopPropagation(); toggleTaskStatusDirectly('${generatedId}')">
                         <div class="todo-content-wrapper">
                             <span class="todo-meta-tag">${item.meta}</span>
@@ -1543,7 +1543,7 @@
                     const isChecked = localStorage.getItem(generatedId) === "true" ? "checked" : "";
                     const hasNote = !!localStorage.getItem(generatedId + '-note');
                     html += `
-                        <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}')" oncontextmenu="openContextMenu(event,'${generatedId}','${item.text.replace(/'/g,"\\'")}','${scope}')">
+                        <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}', !document.getElementById('${generatedId}').checked)" oncontextmenu="openContextMenu(event,'${generatedId}','${item.text.replace(/'/g,"\\'")}','${scope}')">
                             <input type="checkbox" id="${generatedId}" ${isChecked} onclick="event.stopPropagation();toggleTaskStatusDirectly('${generatedId}')">
                             <div class="todo-content-wrapper">
                                 <span class="todo-text" ondblclick="event.stopPropagation();editTaskInline(this,'${scope}',${idx})" title="Double-click to edit">${item.text}</span>
@@ -1570,7 +1570,7 @@
                 const isChecked = localStorage.getItem(generatedId) === "true" ? "checked" : "";
                 const hasNote = !!localStorage.getItem(generatedId + '-note');
                 return `
-                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}')" oncontextmenu="openContextMenu(event,'${generatedId}','${task.replace(/'/g,"\\'")}','${scope}')">
+                    <div class="todo-item" onclick="toggleTaskStatusDirectly('${generatedId}', !document.getElementById('${generatedId}').checked)" oncontextmenu="openContextMenu(event,'${generatedId}','${task.replace(/'/g,"\\'")}','${scope}')">
                         <input type="checkbox" id="${generatedId}" ${isChecked} onclick="event.stopPropagation();toggleTaskStatusDirectly('${generatedId}')">
                         <div class="todo-content-wrapper">
                             <span class="todo-text" ondblclick="event.stopPropagation();editFlatTaskInline(this,'${scope}',${idx})" title="Double-click to edit">${task}</span>
@@ -1786,11 +1786,14 @@
         function toggleMiscSection(sid) { toggleSection(sid); }
         function addMiscSection() { addSection('misc'); }
 
-        function toggleTaskStatusDirectly(id) {
+        function toggleTaskStatusDirectly(id, forceState) {
             const checkbox = document.getElementById(id);
             if (!checkbox) return;
-            
-            const newState = !checkbox.checked;
+
+            // If called from the checkbox's own onclick, the browser already toggled it,
+            // so use checkbox.checked directly. If called from the parent div onclick,
+            // we need to toggle it ourselves. forceState lets callers pass the value directly.
+            const newState = forceState !== undefined ? forceState : checkbox.checked;
             checkbox.checked = newState;
             localStorage.setItem(id, newState ? "true" : "false");
             if (newState) {
@@ -1865,7 +1868,7 @@
                             ${scheduled.map(({ task, id, label }) => {
                                 const isChecked = localStorage.getItem(id) === 'true' ? 'checked' : '';
                                 const hasNote = !!localStorage.getItem(id + '-note');
-                                return `<div class="todo-item" onclick="toggleTaskStatusDirectly('${id}')" oncontextmenu="openContextMenu(event, '${id}', '${task.replace(/'/g, "\\'")}')">
+                                return `<div class="todo-item" onclick="toggleTaskStatusDirectly('${id}', !document.getElementById('${id}').checked)" oncontextmenu="openContextMenu(event, '${id}', '${task.replace(/'/g, "\\'")}')">
                                     <input type="checkbox" id="sched-${id}" ${isChecked} onclick="event.stopPropagation(); toggleTaskStatusDirectly('${id}')">
                                     <div class="todo-content-wrapper">
                                         <span class="todo-meta-tag">${label}</span>
