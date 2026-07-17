@@ -1448,7 +1448,8 @@
 
         function renderCustomScheduleGroup(items) {
             return items.map(item => {
-                const generatedId = generateActiveId(item.task, item.meta, item.idScope);
+                // Use only task + idScope (no meta) so the ID matches what renderDailyRoomGroups generates
+                const generatedId = generateActiveId(item.task, '', item.idScope);
                 const isChecked = localStorage.getItem(generatedId) === "true" ? "checked" : "";
                 const hasNote = !!localStorage.getItem(generatedId + '-note');
                 return `
